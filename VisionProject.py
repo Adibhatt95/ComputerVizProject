@@ -10,24 +10,24 @@ def readimg(path):
     print(type(image))
     print(image)
     return image
-imagePath = 'zebra-crossing-1_10PercentThreshold.bmp'
+imagePath = 'lena256.bmp'
 image = readimg(imagePath)
 #image = readimg('gradientX.bmp')
 for i in range(0,5):
     print(i)
 gaussMask = np.array([[1,1,2,2,2,1,1],[1,2,2,4,2,2,1],[2,2,4,8,4,2,2],[2,4,8,16,8,4,2],[2,2,4,8,4,2,2],[1,2,2,4,2,2,1],[1,1,2,2,2,1,1]])
-print(gaussMask)
-np.savetxt('file.txt', image, fmt="%d")
-image2 = readimg('zebra-crossing-1_30%.bmp')
-image3 = readimg('zebra-crossing-1_nonMaximaSuppressionResult.bmp')
-image4 = readimg('')
-np.savetxt('file2.txt', image2, fmt="%d")
-for i in range(image.shape[0]):
-    for j in range(image.shape[1]):
-        if image[i][j] != image2[i][j]:
-            print('{} {} {} {}'.format(i,j,image[i][j],image2[i][j]))
-import pdb
-pdb.set_trace()
+# print(gaussMask)
+# np.savetxt('file.txt', image, fmt="%d")
+# image2 = readimg('zebra-crossing-1_30%.bmp')
+# image3 = readimg('zebra-crossing-1_nonMaximaSuppressionResult.bmp')
+# image4 = readimg('')
+# np.savetxt('file2.txt', image2, fmt="%d")
+# for i in range(image.shape[0]):
+#     for j in range(image.shape[1]):
+#         if image[i][j] != image2[i][j]:
+#             print('{} {} {} {}'.format(i,j,image[i][j],image2[i][j]))
+# import pdb
+# pdb.set_trace()
 
 def getSubArray(arr, i,j,dist):
     starti = i-dist
@@ -75,24 +75,24 @@ gaussRes = gaussSmoothing(image)
 # import pdb
 # pdb.settrace()
 def normPrewittsRes(gaussRes):
-    prewY = np.array([[-1,-1,-1],[0,0,0],[1,1,1]])
+    prewY = np.array([[1,1,1],[0,0,0],[-1,-1,-1]])
     prewX = np.array([[-1,0,1],[-1,0,1],[-1,0,1]])
     maxX = 0
     maxY = 0
-    normXGradient = np.zeros(gaussRes.shape, dtype=int)
-    normYGradient = np.zeros(gaussRes.shape, dtype=int)
+    normXGradient = np.zeros(gaussRes.shape, dtype=float)
+    normYGradient = np.zeros(gaussRes.shape, dtype=float)
     for i in range(4,gaussRes.shape[0]-4):
         for j in range(4,gaussRes.shape[1]-4):
-            normXGradient[i][j] = abs(performConv(prewX,getSubArray(gaussRes,i,j,1)))
-            normYGradient[i][j] = abs(performConv(prewY,getSubArray(gaussRes,i,j,1)))
-            if(abs(maxX) < abs(normXGradient[i][j])):
-                maxX = normXGradient[i][j]
-            if(abs(maxY) < abs(normYGradient[i][j])):
-                maxY = normYGradient[i][j]
-    for i in range(4,gaussRes.shape[0]-4):
-        for j in range(4,gaussRes.shape[1]-4):
-            normXGradient[i][j] = 255/maxX * normXGradient[i][j]
-            normYGradient[i][j] = 255/maxY * normYGradient[i][j]
+            normXGradient[i][j] = abs(performConv(prewX,getSubArray(gaussRes,i,j,1)))/3
+            normYGradient[i][j] = abs(performConv(prewY,getSubArray(gaussRes,i,j,1)))/3
+    #         if(abs(maxX) < abs(normXGradient[i][j])):
+    #             maxX = normXGradient[i][j]
+    #         if(abs(maxY) < abs(normYGradient[i][j])):
+    #             maxY = normYGradient[i][j]
+    # for i in range(4,gaussRes.shape[0]-4):
+    #     for j in range(4,gaussRes.shape[1]-4):
+    #         normXGradient[i][j] = 255/maxX * normXGradient[i][j]
+    #         normYGradient[i][j] = 255/maxY * normYGradient[i][j]
     return normXGradient, normYGradient
 
 prewRes = normPrewittsRes(gaussRes)
@@ -100,16 +100,17 @@ prewRes = normPrewittsRes(gaussRes)
 #     print(prewRes[4][i])
 
 def normEdgeMag(prewRes):
-    edgeMagRes = np.zeros(prewRes[0].shape,dtype=int)
+    edgeMagRes = np.zeros(prewRes[0].shape,dtype=float)
     max = 0.0
     for i in range(prewRes[0].shape[0]):
         for j in range(prewRes[0].shape[1]):
-            edgeMagRes[i][j] = math.sqrt(prewRes[0][i][j] * prewRes[0][i][j] + prewRes[1][i][j] * prewRes[1][i][j])
+            edgeMagRes[i][j] = math.sqrt(prewRes[0][i][j] * prewRes[0][i][j] + prewRes[1][i][j] * prewRes[1][i][j])/math.sqrt(2)
             if(max < edgeMagRes[i][j]):
                 max = edgeMagRes[i][j]
-    for i in range(prewRes[0].shape[0]):
-        for j in range(prewRes[0].shape[1]):
-            edgeMagRes[i][j] = 255/max * edgeMagRes[i][j]
+    # for i in range(prewRes[0].shape[0]):
+    #     for j in range(prewRes[0].shape[1]):
+    #         edgeMagRes[i][j] = 255/max * edgeMagRes[i][j]
+    print('max:{}'.format(max))
     return edgeMagRes
 
 edgeMagRes = normEdgeMag(prewRes)
@@ -136,22 +137,22 @@ def getSection(angle):
 def getMagWithAngle(edgeMagRes,section,i,j): #need to check for greater than or equal to thing here 
     if section == 1:
         if(edgeMagRes[i][j] >= edgeMagRes[i][j-1] and  edgeMagRes[i][j] >= edgeMagRes[i][j+1]):
-            return edgeMagRes[i][j]
+            return math.floor(edgeMagRes[i][j])
         else:
             return 0
     elif section == 2:
         if(edgeMagRes[i][j] >= edgeMagRes[i+1][j-1] and  edgeMagRes[i][j] >= edgeMagRes[i-1][j+1]):
-            return edgeMagRes[i][j]
+            return math.floor(edgeMagRes[i][j])
         else:
             return 0
     elif section == 3:
         if(edgeMagRes[i][j] >= edgeMagRes[i+1][j] and  edgeMagRes[i][j] >= edgeMagRes[i-1][j]):
-            return edgeMagRes[i][j]
+            return math.floor(edgeMagRes[i][j])
         else:
             return 0
     elif section == 4:
         if(edgeMagRes[i][j] >= edgeMagRes[i-1][j-1] and  edgeMagRes[i][j] >= edgeMagRes[i+1][j+1]):
-            return edgeMagRes[i][j]
+            return math.floor(edgeMagRes[i][j])
         else:
             return 0
     else:
@@ -173,6 +174,7 @@ def nonMaxSupp(edgeMagRes, prewRes):
             #pdb.set_trace()
             section = getSection(angle)
             nonMaxSuppRes[i][j] = getMagWithAngle(edgeMagRes,section,i,j)
+            #print(nonMaxSuppRes[i][j])
     return nonMaxSuppRes
 
 nonMaxSuppRes = nonMaxSupp(edgeMagRes,prewRes)
@@ -201,6 +203,7 @@ def getPTileThreshold(percent, nonMaxSuppRes):
             totalPixels += dictImg[i]
     topPixels = int(totalPixels * percent/100)
     threshold = 0
+    print('total:{} {}'.format(totalPixels,totalTest))
     #pdb.set_trace()
     for i in range(0,256):
         if i in dictImg:
@@ -234,9 +237,11 @@ def getResAfterThreshold(threshold,nonMaxSuppRes):
             else:
                 thesholdRes[i][j] = 0
     return thesholdRes
-print('{} this is the one'.format(nonMaxSuppRes[5][234]))
-threshold10 = getPTileThreshold(30,nonMaxSuppRes)
+
+threshold10 = getPTileThreshold(10,nonMaxSuppRes)
+threshold30 = getPTileThreshold(30,nonMaxSuppRes)
+threshold50 = getPTileThreshold(50,nonMaxSuppRes)
 thrs10Res = getResAfterThreshold(threshold10,nonMaxSuppRes)
 createimage(thrs10Res, '10PercentThreshold',imagePath)
-print(threshold10)
+print('{} {} {} this is the one'.format(threshold10,threshold30,threshold50))
 
