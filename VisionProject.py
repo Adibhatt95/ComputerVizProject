@@ -10,17 +10,25 @@ def readimg(path):
     print(type(image))
     print(image)
     return image
-image = readimg('nonMaxSuppRes.bmp')
+imagePath = 'zebra-crossing-1_10PercentThreshold.bmp'
+image = readimg(imagePath)
 #image = readimg('gradientX.bmp')
 for i in range(0,5):
     print(i)
 gaussMask = np.array([[1,1,2,2,2,1,1],[1,2,2,4,2,2,1],[2,2,4,8,4,2,2],[2,4,8,16,8,4,2],[2,2,4,8,4,2,2],[1,2,2,4,2,2,1],[1,1,2,2,2,1,1]])
 print(gaussMask)
 np.savetxt('file.txt', image, fmt="%d")
-image2 = readimg('zebra-crossing-1_non_maxima_suppressed.bmp')
+image2 = readimg('zebra-crossing-1_30%.bmp')
+image3 = readimg('zebra-crossing-1_nonMaximaSuppressionResult.bmp')
+image4 = readimg('')
 np.savetxt('file2.txt', image2, fmt="%d")
+for i in range(image.shape[0]):
+    for j in range(image.shape[1]):
+        if image[i][j] != image2[i][j]:
+            print('{} {} {} {}'.format(i,j,image[i][j],image2[i][j]))
 import pdb
 pdb.set_trace()
+
 def getSubArray(arr, i,j,dist):
     starti = i-dist
     startj = j-dist
@@ -105,12 +113,10 @@ def normEdgeMag(prewRes):
     return edgeMagRes
 
 edgeMagRes = normEdgeMag(prewRes)
-def createimages(gaussRes, prewRes, edgeMagRes, nonMaxSuppRes):
-    misc.imsave('gaussRes.bmp',gaussRes)
-    misc.imsave('gradientX.bmp',prewRes[0])
-    misc.imsave('gradienty.bmp',prewRes[1])
-    misc.imsave('edgeMagRes.bmp',edgeMagRes)
-    misc.imsave('nonMaxSuppRes.bmp',nonMaxSuppRes)
+def createimage(Res, name, imagePath):
+    imagePath = imagePath.split('.')[0]
+    imagePath += '_'+name+'.bmp'
+    misc.imsave(imagePath,Res)
 
 def getSection(angle):
     if angle < 0:
@@ -124,6 +130,7 @@ def getSection(angle):
     elif (292.5 <= angle and angle < 337.5):
         return 4
     else:
+        print('UNNKWWONAOWNOWAONAWONOWANAOWNDUABFKJHKJFHKHKJAWBKHAJLFHJK:ADSFNWMFJNFHJDKGH:WJNMFOIBGFHJKHFGKJHDLKFNLJKWHFLHLAKEFNLFDNss')
         return 'unknown {}'.format(angle)
 
 def getMagWithAngle(edgeMagRes,section,i,j): #need to check for greater than or equal to thing here 
@@ -169,8 +176,67 @@ def nonMaxSupp(edgeMagRes, prewRes):
     return nonMaxSuppRes
 
 nonMaxSuppRes = nonMaxSupp(edgeMagRes,prewRes)
-createimages(gaussRes,prewRes,edgeMagRes, nonMaxSuppRes)
-
-
-
+createimage(gaussRes,'GaussRes',imagePath)
+createimage(prewRes[0],'PrewittXResult',imagePath)
+createimage(prewRes[1],'PrewittYResult',imagePath)
+createimage(edgeMagRes,'EdgeMagnitudeResult',imagePath)
+createimage(nonMaxSuppRes,'nonMaximaSuppressionResult',imagePath)
+def getPTileThreshold(percent, nonMaxSuppRes):
+    dictImg = {}
+    #import pdb
+    #pdb.set_trace()
+    totalTest = nonMaxSuppRes.shape[0] * nonMaxSuppRes.shape[1]
+    for i in range(nonMaxSuppRes.shape[0]):
+        for j in range(nonMaxSuppRes.shape[1]):
+            if nonMaxSuppRes[i][j] == 0:
+                totalTest = totalTest-1
+                continue
+            elif nonMaxSuppRes[i][j] in dictImg:
+                dictImg[nonMaxSuppRes[i][j]] += 1
+            else:
+                dictImg[nonMaxSuppRes[i][j]] = 1
+    totalPixels = 0
+    for i in range(1, 256):
+        if i in dictImg:
+            totalPixels += dictImg[i]
+    topPixels = int(totalPixels * percent/100)
+    threshold = 0
+    #pdb.set_trace()
+    for i in range(0,256):
+        if i in dictImg:
+            topPixels = topPixels - dictImg[i]
+        if topPixels <= 0:
+            threshold = i
+            #pdb.set_trace()
+            break
+    print(threshold)
+    topPixels = int(totalPixels * percent/100)
+    threshold = 0
+    for i in range(255,-1,-1):
+        if i in dictImg:
+            topPixels = topPixels - dictImg[i]
+        if topPixels < 0:
+            threshold = i
+            # import pdb
+            # pdb.set_trace()
+            break
+        elif topPixels == 0:
+            threshold = i-1
+    return threshold
+def getResAfterThreshold(threshold,nonMaxSuppRes):
+    thesholdRes = np.zeros(nonMaxSuppRes.shape,dtype=int)
+    for i in range(nonMaxSuppRes.shape[0]):
+        for j in range(nonMaxSuppRes.shape[1]):
+            if nonMaxSuppRes[i][j] == 0:
+                thesholdRes[i][j] = 0
+            elif nonMaxSuppRes[i][j] >= threshold:
+                thesholdRes[i][j] = 255
+            else:
+                thesholdRes[i][j] = 0
+    return thesholdRes
+print('{} this is the one'.format(nonMaxSuppRes[5][234]))
+threshold10 = getPTileThreshold(30,nonMaxSuppRes)
+thrs10Res = getResAfterThreshold(threshold10,nonMaxSuppRes)
+createimage(thrs10Res, '10PercentThreshold',imagePath)
+print(threshold10)
 
