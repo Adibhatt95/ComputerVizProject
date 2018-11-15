@@ -1,125 +1,110 @@
 import os
-from scipy import misc
-import numpy as np
-import math
+from scipy import misc#for reading the image
+import numpy as np#for numerical calculations on the pixel array of the image
+import math#for operations like tan inverse an square root function
 def readimg(path):
-    path1 = ''
-    image= misc.imread(os.path.join(path1,path), flatten= 0)
-
-    #image = np.asarray(image)
-    print(type(image))
-    print(image)
+    path1 = ''#this shows that it is in same directory#this function takes name of the image as input, or the full path of image
+    image= misc.imread(os.path.join(path1,path), flatten= 0)#this function reads images in the current version of scipy
+    #it will give a warning to use the updated method to read images, but it will work because it is compatible with current version of scipy
+    print(image)#tthis prints the numpy array of the pixels of the image
     return image
-imagePath = 'lena256.bmp'
-image = readimg(imagePath)
-#image = readimg('gradientX.bmp')
-for i in range(0,5):
-    print(i)
-gaussMask = np.array([[1,1,2,2,2,1,1],[1,2,2,4,2,2,1],[2,2,4,8,4,2,2],[2,4,8,16,8,4,2],[2,2,4,8,4,2,2],[1,2,2,4,2,2,1],[1,1,2,2,2,1,1]])
-# print(gaussMask)
-# np.savetxt('file.txt', image, fmt="%d")
-# image2 = readimg('zebra-crossing-1_30%.bmp')
-# image3 = readimg('zebra-crossing-1_nonMaximaSuppressionResult.bmp')
-# image4 = readimg('')
-# np.savetxt('file2.txt', image2, fmt="%d")
-# for i in range(image.shape[0]):
-#     for j in range(image.shape[1]):
-#         if image[i][j] != image2[i][j]:
-#             print('{} {} {} {}'.format(i,j,image[i][j],image2[i][j]))
-# import pdb
-# pdb.set_trace()
+imagePath = 'lena256.bmp'#specify image path here.
+image = readimg(imagePath)# calls the reading function
 
-def getSubArray(arr, i,j,dist):
-    starti = i-dist
+
+def getSubArray(arr, i,j,dist):#this function takes a numpy array arr as input, and a i,j value in the array, and a dist metric and 
+    #this function returns a 7x7 sub array of the array arr which center is at i,j in arr and contains value of the arr that were distance dist in all directions
+    #of the center ar i,j
+    starti = i-dist#for starting the loop
     startj = j-dist
-    endi = i+dist
+    endi = i+dist#to end the loop
     endj = j+dist
-    retarr = np.ones([7,7],dtype=int)
+    retarr = np.ones([7,7],dtype=int)#initialize array here
     w=0
     v=0
     for x in range(starti, endi+1):
         v=0
         for y in range(startj, endj+1):
-            retarr[w][v] = arr[x][y]
+            retarr[w][v] = arr[x][y]#this fills up the new array from left to right, so values towards the right bottom corner stay the initial value
             v = v+1
         w = w + 1
         #print(retarr)
-    return retarr
+    return retarr#this is the subarray that is returned.
 
-def performConv(mask,arr):
+def performConv(mask,arr):#this function performs convolution and returns the value
+    #mask=mask/operator to use
+    #arr=subarray touse 
     sum = 0
-    for i in range(mask.shape[0]):
-        for j in range(mask.shape[1]):
+    for i in range(mask.shape[0]): #this uses the dimensions of the mask as the arr dimensions will always be 7x7
+        for j in range(mask.shape[1]):#the dimensions of the mask matters here.
             sum += mask[i][j] * arr[i][j]
             
    # print(sum/140)
     return sum
 
-def gaussSmoothing(image):
-    # retarr = getSubArray(image,3,3)
+def gaussSmoothing(image):#this is the function that does the gaussian smoothing of image given input image.
+    #image= input numpy array 
+    gaussMask = np.array([[1,1,2,2,2,1,1],[1,2,2,4,2,2,1],[2,2,4,8,4,2,2],[2,4,8,16,8,4,2],[2,2,4,8,4,2,2],[1,2,2,4,2,2,1],[1,1,2,2,2,1,1]])
+    #initialize the gaussian mask above to make it a numpy array, this is used in gaussSmoothing function
     gaussRes = np.zeros(image.shape, dtype=int)
-    # gaussRes[3][3] = performConv(gaussMask,retarr)
-
     for i in range(3,image.shape[0]-3):
         for j in range(3,image.shape[1]-3):
-            #if(i < 3 or i > (image.shape(0)-3) or j < 3 or j > image.shape(1)-3):
-            gaussRes[i][j] = performConv(gaussMask,getSubArray(image,i,j,3))/140
-    #print(retarr)
-    for i in range(image.shape[1]):
-        print(gaussRes[3][i])
-    print(gaussRes)
+            #if(i < 3 or i > (image.shape(0)-3) or j < 3 or j > image.shape(1)-3): #below, dist = 3 for gaussian 7x7 subarray
+            gaussRes[i][j] = performConv(gaussMask,getSubArray(image,i,j,3))/140#uses performConv method sends mask and subarray, divide by 140 to normalize
+    #print(gaussRes)
     return gaussRes
 
-gaussRes = gaussSmoothing(image)
-# #print(gaussRes)
-# import pdb
-# pdb.settrace()
-def normPrewittsRes(gaussRes):
-    prewY = np.array([[1,1,1],[0,0,0],[-1,-1,-1]])
-    prewX = np.array([[-1,0,1],[-1,0,1],[-1,0,1]])
-    maxX = 0
-    maxY = 0
-    normXGradient = np.zeros(gaussRes.shape, dtype=float)
-    normYGradient = np.zeros(gaussRes.shape, dtype=float)
-    for i in range(4,gaussRes.shape[0]-4):
-        for j in range(4,gaussRes.shape[1]-4):
-            normXGradient[i][j] = abs(performConv(prewX,getSubArray(gaussRes,i,j,1)))/3
-            normYGradient[i][j] = abs(performConv(prewY,getSubArray(gaussRes,i,j,1)))/3
+gaussRes = gaussSmoothing(image)#calls gaussian smoothing function with input image numpy array
+
+def normPrewittsRes(gaussRes):#this function returns result of using horizontalOperator,vertical Operator
+    #GAussRes= input numpy array 
+    prewY = np.array([[1,1,1],[0,0,0],[-1,-1,-1]])#initializing Prewitt operators This is for vertical Operator Gy
+    prewX = np.array([[-1,0,1],[-1,0,1],[-1,0,1]])# this is for horizontal operator Gx
+    normXGradient = np.zeros(gaussRes.shape, dtype=float)#initliazing the result here,
+    normYGradient = np.zeros(gaussRes.shape, dtype=float)#same as above
+    for i in range(4,gaussRes.shape[0]-4):#range from 4th row to 4th last row
+        for j in range(4,gaussRes.shape[1]-4):#range from valid columns as above
+            normXGradient[i][j] = abs(performConv(prewX,getSubArray(gaussRes,i,j,1)))/3#divide by 3 to normalize
+            normYGradient[i][j] = abs(performConv(prewY,getSubArray(gaussRes,i,j,1)))/3#getting subway to convolute with the operators, dist=1 for this
     #         if(abs(maxX) < abs(normXGradient[i][j])):
     #             maxX = normXGradient[i][j]
-    #         if(abs(maxY) < abs(normYGradient[i][j])):
+    #         if(abs(maxY) < abs(normYGradient[i][j])):#this part was for normalization using min-max normalization, but it has been commented out.
     #             maxY = normYGradient[i][j]
     # for i in range(4,gaussRes.shape[0]-4):
     #     for j in range(4,gaussRes.shape[1]-4):
     #         normXGradient[i][j] = 255/maxX * normXGradient[i][j]
     #         normYGradient[i][j] = 255/maxY * normYGradient[i][j]
     return normXGradient, normYGradient
+prewRes = normPrewittsRes(gaussRes)#calling the function
 
-prewRes = normPrewittsRes(gaussRes)
-# for i in range(prewRes[0].shape[1]):
-#     print(prewRes[4][i])
 
-def normEdgeMag(prewRes):
-    edgeMagRes = np.zeros(prewRes[0].shape,dtype=float)
+def normEdgeMag(prewRes):#calculates edge magnitudes and normalizes and returns the result.
+    edgeMagRes = np.zeros(prewRes[0].shape,dtype=float)#result initialized
     max = 0.0
     for i in range(prewRes[0].shape[0]):
         for j in range(prewRes[0].shape[1]):
-            edgeMagRes[i][j] = math.sqrt(prewRes[0][i][j] * prewRes[0][i][j] + prewRes[1][i][j] * prewRes[1][i][j])/math.sqrt(2)
-            if(max < edgeMagRes[i][j]):
-                max = edgeMagRes[i][j]
+            edgeMagRes[i][j] = math.sqrt(prewRes[0][i][j] * prewRes[0][i][j] + prewRes[1][i][j] * prewRes[1][i][j])/math.sqrt(2)#calculation here
+            #dividing by math.sqrt(2) for normalization
+            # if(max < edgeMagRes[i][j]):
+            #     max = edgeMagRes[i][j]
     # for i in range(prewRes[0].shape[0]):
     #     for j in range(prewRes[0].shape[1]):
     #         edgeMagRes[i][j] = 255/max * edgeMagRes[i][j]
-    print('max:{}'.format(max))
+    # print('max:{}'.format(max))
     return edgeMagRes
 
 edgeMagRes = normEdgeMag(prewRes)
-def createimage(Res, name, imagePath):
+def createimage(Res, name, imagePath): #function to write images.
+    #Res = numpy array to write image
+    #name= name of image
+    #imagepath = original image name to front_append name to 
     imagePath = imagePath.split('.')[0]
     imagePath += '_'+name+'.bmp'
     misc.imsave(imagePath,Res)
 
-def getSection(angle):
+def getSection(angle):#function to get the correct section from the gradient angle.
+    #angle=gradient angle
+    #this checks for all 4 sections, since inverse of tan's range is -90 to +90, the angles outside this range will not be encountered ever.
     if angle < 0:
         angle = 360 + angle
     if (337.5 <= angle and angle <= 360) or (0 <=  angle and angle < 22.5):
@@ -134,10 +119,11 @@ def getSection(angle):
         print('UNNKWWONAOWNOWAONAWONOWANAOWNDUABFKJHKJFHKHKJAWBKHAJLFHJK:ADSFNWMFJNFHJDKGH:WJNMFOIBGFHJKHFGKJHDLKFNLJKWHFLHLAKEFNLFDNss')
         return 'unknown {}'.format(angle)
 
-def getMagWithAngle(edgeMagRes,section,i,j): #need to check for greater than or equal to thing here 
+def getMagWithAngle(edgeMagRes,section,i,j): #Function that checks the magnitudes of neighbours in that section
+    #edgeMagRes =numpy array, section= section based on the angle, i and j- coordinates of pixel in edgeMagRes to compare magnitude with.
     if section == 1:
         if(edgeMagRes[i][j] >= edgeMagRes[i][j-1] and  edgeMagRes[i][j] >= edgeMagRes[i][j+1]):
-            return math.floor(edgeMagRes[i][j])
+            return math.floor(edgeMagRes[i][j]) #this function is used to convert decmial float to integer, different functions for this will give difffernt answers
         else:
             return 0
     elif section == 2:
@@ -227,6 +213,7 @@ def getPTileThreshold(percent, nonMaxSuppRes):
             threshold = i-1
     return threshold
 def getResAfterThreshold(threshold,nonMaxSuppRes):
+    edgesCount = 0
     thesholdRes = np.zeros(nonMaxSuppRes.shape,dtype=int)
     for i in range(nonMaxSuppRes.shape[0]):
         for j in range(nonMaxSuppRes.shape[1]):
@@ -234,14 +221,20 @@ def getResAfterThreshold(threshold,nonMaxSuppRes):
                 thesholdRes[i][j] = 0
             elif nonMaxSuppRes[i][j] >= threshold:
                 thesholdRes[i][j] = 255
+                edgesCount+=1
             else:
                 thesholdRes[i][j] = 0
-    return thesholdRes
+    return thesholdRes,edgesCount
 
 threshold10 = getPTileThreshold(10,nonMaxSuppRes)
 threshold30 = getPTileThreshold(30,nonMaxSuppRes)
 threshold50 = getPTileThreshold(50,nonMaxSuppRes)
 thrs10Res = getResAfterThreshold(threshold10,nonMaxSuppRes)
-createimage(thrs10Res, '10PercentThreshold',imagePath)
-print('{} {} {} this is the one'.format(threshold10,threshold30,threshold50))
+thrs30Res = getResAfterThreshold(threshold30,nonMaxSuppRes)
+thrs50Res = getResAfterThreshold(threshold50,nonMaxSuppRes)
+createimage(thrs10Res[0], '10PercentThreshold',imagePath)
+createimage(thrs30Res[0], '30PercentThreshold',imagePath)
+createimage(thrs50Res[0], '50PercentThreshold',imagePath)   
+print('{} {} {} are the thresholds for 10%, 30%, and 50percent respectively'.format(threshold10,threshold30,threshold50))
+print('{} {} {} are the total number of edges detected for 10%, 30%, and 50percent ptile respectively'.format(thrs10Res[1],thrs30Res[1],thrs50Res[1]))
 
