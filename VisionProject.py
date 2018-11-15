@@ -10,11 +10,17 @@ def readimg(path):
     print(type(image))
     print(image)
     return image
-image = readimg('zebra-crossing-1.bmp')
+image = readimg('nonMaxSuppRes.bmp')
+#image = readimg('gradientX.bmp')
 for i in range(0,5):
     print(i)
 gaussMask = np.array([[1,1,2,2,2,1,1],[1,2,2,4,2,2,1],[2,2,4,8,4,2,2],[2,4,8,16,8,4,2],[2,2,4,8,4,2,2],[1,2,2,4,2,2,1],[1,1,2,2,2,1,1]])
 print(gaussMask)
+np.savetxt('file.txt', image, fmt="%d")
+image2 = readimg('zebra-crossing-1_non_maxima_suppressed.bmp')
+np.savetxt('file2.txt', image2, fmt="%d")
+import pdb
+pdb.set_trace()
 def getSubArray(arr, i,j,dist):
     starti = i-dist
     startj = j-dist
@@ -43,7 +49,7 @@ def performConv(mask,arr):
 
 def gaussSmoothing(image):
     # retarr = getSubArray(image,3,3)
-    gaussRes = np.zeros(image.shape, dtype=float)
+    gaussRes = np.zeros(image.shape, dtype=int)
     # gaussRes[3][3] = performConv(gaussMask,retarr)
 
     for i in range(3,image.shape[0]-3):
@@ -57,15 +63,16 @@ def gaussSmoothing(image):
     return gaussRes
 
 gaussRes = gaussSmoothing(image)
-print(gaussRes)
-
+# #print(gaussRes)
+# import pdb
+# pdb.settrace()
 def normPrewittsRes(gaussRes):
     prewY = np.array([[-1,-1,-1],[0,0,0],[1,1,1]])
     prewX = np.array([[-1,0,1],[-1,0,1],[-1,0,1]])
     maxX = 0
     maxY = 0
-    normXGradient = np.zeros(gaussRes.shape, dtype=float)
-    normYGradient = np.zeros(gaussRes.shape, dtype=float)
+    normXGradient = np.zeros(gaussRes.shape, dtype=int)
+    normYGradient = np.zeros(gaussRes.shape, dtype=int)
     for i in range(4,gaussRes.shape[0]-4):
         for j in range(4,gaussRes.shape[1]-4):
             normXGradient[i][j] = abs(performConv(prewX,getSubArray(gaussRes,i,j,1)))
@@ -85,8 +92,8 @@ prewRes = normPrewittsRes(gaussRes)
 #     print(prewRes[4][i])
 
 def normEdgeMag(prewRes):
-    edgeMagRes = np.zeros(prewRes[0].shape,dtype=float)
-    max = 0
+    edgeMagRes = np.zeros(prewRes[0].shape,dtype=int)
+    max = 0.0
     for i in range(prewRes[0].shape[0]):
         for j in range(prewRes[0].shape[1]):
             edgeMagRes[i][j] = math.sqrt(prewRes[0][i][j] * prewRes[0][i][j] + prewRes[1][i][j] * prewRes[1][i][j])
@@ -108,35 +115,35 @@ def createimages(gaussRes, prewRes, edgeMagRes, nonMaxSuppRes):
 def getSection(angle):
     if angle < 0:
         angle = 360 + angle
-    if (337.5 >= angle <= 360) or (0 >=  angle < 22.5):
+    if (337.5 <= angle and angle <= 360) or (0 <=  angle and angle < 22.5):
         return 1
-    elif 67.5 > angle >= 22.5:
+    elif 67.5 > angle and angle >= 22.5:
         return 2
-    elif (67.5 <= angle < 112.5) or (247.5 <= angle < 292.5):
+    elif (67.5 <= angle and angle < 112.5) or (247.5 <= angle and angle < 292.5):
         return 3
-    elif (292.5 <= angle < 337.5):
+    elif (292.5 <= angle and angle < 337.5):
         return 4
     else:
         return 'unknown {}'.format(angle)
 
 def getMagWithAngle(edgeMagRes,section,i,j): #need to check for greater than or equal to thing here 
     if section == 1:
-        if(edgeMagRes[i][j] > edgeMagRes[i][j-1] and  edgeMagRes[i][j] > edgeMagRes[i][j+1]):
+        if(edgeMagRes[i][j] >= edgeMagRes[i][j-1] and  edgeMagRes[i][j] >= edgeMagRes[i][j+1]):
             return edgeMagRes[i][j]
         else:
             return 0
     elif section == 2:
-        if(edgeMagRes[i][j] > edgeMagRes[i+1][j-1] and  edgeMagRes[i][j] > edgeMagRes[i-1][j+1]):
+        if(edgeMagRes[i][j] >= edgeMagRes[i+1][j-1] and  edgeMagRes[i][j] >= edgeMagRes[i-1][j+1]):
             return edgeMagRes[i][j]
         else:
             return 0
     elif section == 3:
-        if(edgeMagRes[i][j] > edgeMagRes[i+1][j] and  edgeMagRes[i][j] > edgeMagRes[i-1][j]):
+        if(edgeMagRes[i][j] >= edgeMagRes[i+1][j] and  edgeMagRes[i][j] >= edgeMagRes[i-1][j]):
             return edgeMagRes[i][j]
         else:
             return 0
     elif section == 4:
-        if(edgeMagRes[i][j] > edgeMagRes[i-1][j-1] and  edgeMagRes[i][j] > edgeMagRes[i+1][j+1]):
+        if(edgeMagRes[i][j] >= edgeMagRes[i-1][j-1] and  edgeMagRes[i][j] >= edgeMagRes[i+1][j+1]):
             return edgeMagRes[i][j]
         else:
             return 0
@@ -144,18 +151,20 @@ def getMagWithAngle(edgeMagRes,section,i,j): #need to check for greater than or 
         return 'disaster {} {} {}'.format(section,i,j)
 
 def getAngle(y,x):
-    if y == 0:
-        return -45
-    elif x == 0:
+    if x == 0 and y != 0:
         return 90
+    elif(y == 0):
+        return 0
     else:
-        return math.degrees(math.atan(y/x))
+        return math.degrees(math.atan2(y,x))
 
 def nonMaxSupp(edgeMagRes, prewRes):
-    nonMaxSuppRes = np.zeros(edgeMagRes.shape,dtype=float)
+    nonMaxSuppRes = np.zeros(edgeMagRes.shape,dtype=int)
     for i in range(5,prewRes[0].shape[0]-5):
         for j in range(5,prewRes[0].shape[1]-5):
-            section = getSection(getAngle(prewRes[1][i][j],prewRes[0][i][j]))
+            angle = getAngle(prewRes[1][i][j],prewRes[0][i][j])
+            #pdb.set_trace()
+            section = getSection(angle)
             nonMaxSuppRes[i][j] = getMagWithAngle(edgeMagRes,section,i,j)
     return nonMaxSuppRes
 
